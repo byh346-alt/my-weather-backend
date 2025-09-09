@@ -173,7 +173,7 @@ async function showClothingPopup(temp) {
   // 팝업 내용을 '로딩 중...'으로 초기화
   popup.innerHTML = `
     <div class="tooltip-header">
-      <div class="tooltip-title">✨ 나노바나나 추천 옷차림</div>
+      <div class="tooltip-title">✨ 추천 옷차림</div>
       <div aria-hidden="true">${Number(temp).toFixed(1)}°C</div>
     </div>
     <div class="outfit-description">AI가 옷차림을 생성하는 중... 잠시만 기다려주세요.</div>
@@ -193,7 +193,7 @@ async function showClothingPopup(temp) {
     // AI로부터 받은 옷차림 설명으로 팝업 내용 업데이트
     popup.innerHTML = `
       <div class="tooltip-header">
-        <div class="tooltip-title">✨ 나노바나나 추천 옷차림</div>
+        <div class="tooltip-title">✨ 추천 옷차림</div>
         <div aria-hidden="true">${Number(temp).toFixed(1)}°C</div>
       </div>
       <div class="outfit-description">${outfitDescription}</div>

@@ -10,8 +10,8 @@ exports.handler = async (event) => {
     // URL에서 온도 값을 가져옵니다. (예: ?temp=23)
     const temp = event.queryStringParameters.temp || "15"; // 기본값 15도
 
-    // AI 모델을 선택합니다. (수정된 부분)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro" });
+    // AI 모델을 선택합니다. (최신 모델 이름으로 수정)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
     // AI에게 보낼 명령어 (프롬프트)
     const prompt = `${temp}도 날씨에 어울리는 옷차림을 스타일리시하게 2~3줄로 설명해줘.`;

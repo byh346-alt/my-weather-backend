@@ -244,16 +244,27 @@ async function getWeather() {
   let openData = {}, weatherAPIData = {}, tomorrowData = {};
   let lat = null, lon = null;
 
+  // OpenWeather
   try {
     const res = await fetch(openURL);
     const json = await res.json();
     if (json.cod !== "200") throw new Error(json.message || "OpenWeather API error");
+    
     json.list.forEach(item => {
-      const dt = item.dt_txt;
-      const hour = dt.split(" ")[1].substring(0, 2);
-      if (parseInt(hour) % 3 === 0) {
-        const date = dt.split(" ")[0];
-        const time = dt.split(" ")[1].substring(0, 5);
+      // 1. UTC 시간 문자열을 Date 객체로 변환 (공백을 'T'로 바꾸고 'Z'를 붙여 ISO 형식으로 만듦)
+      const dtUTC = new Date(item.dt_txt.replace(" ", "T") + "Z");
+
+      // 2. 9시간(밀리초 단위)을 더해 KST로 변환
+      const dtKST = new Date(dtUTC.getTime() + (9 * 60 * 60 * 1000));
+
+      // 3. KST Date 객체에서 날짜와 시간 문자열 추출 (ISO 형식 활용)
+      const date = dtKST.toISOString().slice(0, 10);
+      const time = dtKST.toISOString().slice(11, 16);
+      
+      const hour = parseInt(time.substring(0, 2));
+
+      // 3시간 간격 데이터만 저장하는 기존 로직 유지
+      if (hour % 3 === 0) {
         if (!openData[date]) openData[date] = {};
         openData[date][time] = { weather: item.weather[0].main, temp: item.main.temp };
       }
@@ -265,6 +276,7 @@ async function getWeather() {
     showMessageBox("API 오류", "OpenWeather 데이터를 가져오는 데 실패했습니다.");
   }
 
+  // WeatherAPI
   try {
     const res = await fetch(weatherAPIURL);
     const json = await res.json();
@@ -284,6 +296,7 @@ async function getWeather() {
     console.error("WeatherAPI 데이터 오류:", err);
   }
 
+  // Tomorrow.io
   try {
     if (!lat || !lon) {
         console.warn("위치 좌표 없음 (Tomorrow.io 요청 건너뜀)");

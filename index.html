@@ -33,7 +33,16 @@
     tr:nth-child(even) { background-color: #f9f9f9; }
     tr:hover { background-color: #eef; }
     td strong { color: #28a745; font-weight: bold; }
-    .chart-container { margin-top: 40px; padding: 20px; background-color: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); heoght : 50vh; max-height: 400px; }
+    .chart-container { 
+      margin-top: 40px; 
+      padding: 20px; 
+      background-color: #fff; 
+      border-radius: 12px; 
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      position: relative;
+      height: 50vh; 
+      max-height: 400px;
+    }
     .message-box {
       position: fixed;
       top: 50%;
@@ -64,7 +73,6 @@
     }
     .message-box button:hover { background-color: #2980b9; }
 
-    /* 크고 선명한 '썸네일' 스타일 팝업 카드 */
     .tooltip-img {
       position: fixed;
       display: none;
@@ -170,7 +178,6 @@ const popup = document.getElementById("clothingPopup");
 
 /** 옷차림 팝업 열기 */
 async function showClothingPopup(temp) {
-  // 팝업 내용을 '로딩 중...'으로 초기화
   popup.innerHTML = `
     <div class="tooltip-header">
       <div class="tooltip-title">✨ 추천 옷차림</div>
@@ -182,15 +189,14 @@ async function showClothingPopup(temp) {
   popup.style.display = "block";
 
   try {
-    // Netlify에 배포된 백엔드 함수에 온도(temp)를 전달하며 요청
-    const response = await fetch(`/.netlify/functions/generate-outfit?temp=${temp}`);
+    // Vercel 백엔드 함수 경로로 수정
+    const response = await fetch(`/api/generate-outfit?temp=${temp}`);
     if (!response.ok) {
       throw new Error('서버에서 응답을 받지 못했습니다.');
     }
     const data = await response.json();
     const outfitDescription = data.outfit;
 
-    // AI로부터 받은 옷차림 설명으로 팝업 내용 업데이트
     popup.innerHTML = `
       <div class="tooltip-header">
         <div class="tooltip-title">✨ 추천 옷차림</div>
@@ -201,7 +207,6 @@ async function showClothingPopup(temp) {
     `;
 
   } catch (error) {
-    // 에러 발생 시 팝업 내용에 에러 메시지 표시
     popup.innerHTML = `
       <div class="tooltip-header">
         <div class="tooltip-title">오류 발생</div>
@@ -244,26 +249,17 @@ async function getWeather() {
   let openData = {}, weatherAPIData = {}, tomorrowData = {};
   let lat = null, lon = null;
 
-  // OpenWeather
   try {
     const res = await fetch(openURL);
     const json = await res.json();
     if (json.cod !== "200") throw new Error(json.message || "OpenWeather API error");
     
     json.list.forEach(item => {
-      // 1. UTC 시간 문자열을 Date 객체로 변환 (공백을 'T'로 바꾸고 'Z'를 붙여 ISO 형식으로 만듦)
       const dtUTC = new Date(item.dt_txt.replace(" ", "T") + "Z");
-
-      // 2. 9시간(밀리초 단위)을 더해 KST로 변환
       const dtKST = new Date(dtUTC.getTime() + (9 * 60 * 60 * 1000));
-
-      // 3. KST Date 객체에서 날짜와 시간 문자열 추출 (ISO 형식 활용)
       const date = dtKST.toISOString().slice(0, 10);
       const time = dtKST.toISOString().slice(11, 16);
-      
       const hour = parseInt(time.substring(0, 2));
-
-      // 3시간 간격 데이터만 저장하는 기존 로직 유지
       if (hour % 3 === 0) {
         if (!openData[date]) openData[date] = {};
         openData[date][time] = { weather: item.weather[0].main, temp: item.main.temp };
@@ -276,7 +272,6 @@ async function getWeather() {
     showMessageBox("API 오류", "OpenWeather 데이터를 가져오는 데 실패했습니다.");
   }
 
-  // WeatherAPI
   try {
     const res = await fetch(weatherAPIURL);
     const json = await res.json();
@@ -296,7 +291,6 @@ async function getWeather() {
     console.error("WeatherAPI 데이터 오류:", err);
   }
 
-  // Tomorrow.io
   try {
     if (!lat || !lon) {
         console.warn("위치 좌표 없음 (Tomorrow.io 요청 건너뜀)");
@@ -304,31 +298,23 @@ async function getWeather() {
         const tomorrowURL = `https://corsproxy.io/?https://api.tomorrow.io/v4/weather/forecast?location=${lat},${lon}&timesteps=1h&apikey=${tomorrowKey}`;
         const res = await fetch(tomorrowURL);
         const json = await res.json();
-
         if (!json.timelines || !json.timelines.hourly) throw new Error("hourly 데이터 없음");
-
         const targetHours = [0, 3, 6, 9, 12, 15, 18, 21];
-
         json.timelines.hourly.forEach(item => {
           const dtUTC = new Date(item.time);
           const dtKST = new Date(dtUTC.getTime() + 9 * 60 * 60 * 1000);
           const hour = dtKST.getUTCHours();
-
           if (!targetHours.includes(hour)) return;
           if (!item.values || item.values.weatherCode === undefined || item.values.temperature === undefined) return;
-
           const date = dtKST.toISOString().split("T")[0];
           const time = dtKST.toISOString().substring(11, 16);
-
           const todayKSTForCompare = new Date();
           todayKSTForCompare.setHours(0,0,0,0);
           const itemDateKST = new Date(dtKST);
           itemDateKST.setHours(0,0,0,0);
           const dayDiff = Math.floor((itemDateKST - todayKSTForCompare) / (1000 * 60 * 60 * 24));
           if (dayDiff < 0 || dayDiff >= 5) return;
-
           if (!tomorrowData[date]) tomorrowData[date] = {};
-
           const code = item.values.weatherCode;
           let weather = "Unknown";
           if ([1000, 1100].includes(code)) weather = "Sunny";
@@ -338,12 +324,11 @@ async function getWeather() {
           else if (code >= 4000 && code < 5000) weather = "Rain";
           else if (code >= 5000 && code < 6000) weather = "Snow";
           else if (code >= 8000) weather = "Thunderstorm";
-
           tomorrowData[date][time] = { weather, temp: item.values.temperature };
         });
     }
   } catch (err) {
-    console.error("Tomorrow.io 오류", err);
+    console.error("Tomorrow.io 오류:", err);
   }
 
   const todayForReference = new Date();
@@ -377,14 +362,11 @@ async function getWeather() {
     [...times].sort().forEach(time => {
       const hour = parseInt(time.split(":")[0]);
       if (hour % 3 !== 0) return;
-
       const openVal = openData[date]?.[time] || { weather: "N/A", temp: "-" };
       const weatherapiVal = weatherAPIData[date]?.[time] || { weather: "N/A", temp: "-" };
       const tomoVal = tomorrowData[date]?.[time] || { weather: "N/A", temp: "-" };
-
       const temps = [openVal.temp, weatherapiVal.temp, tomoVal.temp].filter(t => typeof t === "number");
       const avgTemp = temps.length > 0 ? (temps.reduce((a, b) => a + b, 0) / temps.length).toFixed(1) : "-";
-
       const votes = [openVal.weather, weatherapiVal.weather, tomoVal.weather]
         .filter(w => w !== "N/A" && w !== "오류" && w !== "Unknown");
       let majority = "N/A";
@@ -430,8 +412,10 @@ async function getWeather() {
 
 function drawChart(openData, weatherAPIData, tomorrowData) {
   const container = document.getElementById("chartContainer");
-  container.innerHTML = `<canvas id="tempChart" height="100"></canvas>`;
+  container.innerHTML = `<canvas id="tempChart"></canvas>`;
   const ctx = document.getElementById("tempChart").getContext("2d");
+
+  const isMobile = window.innerWidth <= 768;
 
   const labels = [];
   const openTemps = [];
@@ -452,11 +436,18 @@ function drawChart(openData, weatherAPIData, tomorrowData) {
     ]);
 
     Array.from(allTimes).sort().forEach(time => {
+      const hour = parseInt(time.split(':')[0]);
+      if (isMobile && hour % 6 !== 0) {
+        return;
+      }
       const label = `${date} ${time}`;
       labels.push(label);
-      openTemps.push(openData[date]?.[time]?.temp ?? null);
-      weatherapiTemps.push(weatherAPIData[date]?.[time]?.temp ?? null);
-      tomorrowTemps.push(tomorrowData[date]?.[time]?.temp ?? null);
+      const openVal = openData[date]?.[time];
+      openTemps.push(openVal ? openVal.temp : null);
+      const weatherapiVal = weatherAPIData[date]?.[time];
+      weatherapiTemps.push(weatherapiVal ? weatherapiVal.temp : null);
+      const tomorrowVal = tomorrowData[date]?.[time];
+      tomorrowTemps.push(tomorrowVal ? tomorrowVal.temp : null);
     });
   });
 
@@ -465,14 +456,14 @@ function drawChart(openData, weatherAPIData, tomorrowData) {
     data: {
       labels,
       datasets: [
-        { label: 'OpenWeather (°C)', data: openTemps, borderColor: 'blue', borderWidth: 2, fill: false },
-        { label: 'WeatherAPI (°C)', data: weatherapiTemps, borderColor: 'green', borderWidth: 2, fill: false },
-        { label: 'Tomorrow.io (°C)', data: tomorrowTemps, borderColor: 'orange', borderWidth: 2, fill: false }
+        { label: 'OpenWeather (°C)', data: openTemps, borderColor: 'blue', borderWidth: 2, fill: false, spanGaps: true },
+        { label: 'WeatherAPI (°C)', data: weatherapiTemps, borderColor: 'green', borderWidth: 2, fill: false, spanGaps: true },
+        { label: 'Tomorrow.io (°C)', data: tomorrowTemps, borderColor: 'orange', borderWidth: 2, fill: false, spanGaps: true }
       ]
     },
     options: {
       responsive: true,
-      maintainAspectRatio : false,
+      maintainAspectRatio: false,
       scales: { x: { display: true }, y: { beginAtZero: false } }
     }
   });

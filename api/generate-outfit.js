@@ -11,8 +11,8 @@ export default async function handler(request, response) {
     // URL에서 온도 값을 가져옵니다. (예: ?temp=23)
     const temp = request.query.temp || "15"; // 기본값 15도
 
-    // AI 모델을 선택합니다.
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// AI 모델을 선택합니다. (Gemini 1.5 Pro 최신 버전 사용)
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
 
     // AI에게 보낼 명령어 (프롬프트)
     const prompt = `${temp}도 날씨에 어울리는 옷차림을 스타일리시하게 2~3줄로 설명해줘.`;
